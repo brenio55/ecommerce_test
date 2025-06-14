@@ -75,9 +75,15 @@ class PedidoController extends Controller
         $pedidoDataCriacao = date('Y-m-d H:i:s');
         $pedidoStatus = "gerado automaticamente";
 
-        function insertPedido($pedidoIdUsuario, $pedidoTotalValor, $pedidoItens){
-            
+        function insertPedido($pedidoIdUsuarioParam, $pedidoTotalValorParam, $pedidoItensParam){
+            // $query = "INSERT INTO pedidos (pedido_id_usuario, pedido_total_valor, pedido_itens) VALUES ($pedidoIdUsuarioParam, $pedidoTotalValorParam, $pedidoItensParam)";
+
+            // $result = DB::table('pedidos')->insert($query);
+
+            // return $result;
         }
+
+        // insertPedido($pedidoIdUsuario, $pedidoTotalValor, $pedidoItens);
         
 
         return response()->json([
