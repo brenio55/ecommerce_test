@@ -50,9 +50,6 @@ class PedidoController extends Controller
     // }
 
     public function create(Request $request){
-        Log::channel('stderr')->info('>> .env SUPABASE_URL: ' . env('SUPABASE_URL'));
-        Log::channel('stderr')->info('>> .env SUPABASE_ANON_KEY: ' . env('SUPABASE_ANON_KEY'));
-
         Log::channel('stderr')->info('>> Requisição recebida em PedidoController. ');
         Log::channel('stderr')->info('>> PedidoController recebido: ' . json_encode($request->all()));
 
@@ -60,11 +57,6 @@ class PedidoController extends Controller
         $pedidoIdUsuario = $request->input('pedido_id_usuario');
         $pedidoItens = $request->input('pedido_itens');
         $pedidoItens = json_decode($pedidoItens, true);
-
-        $pedidouuid = "gerado automaticamente";
-        $pedidoTotalValor = "gerado automaticamente";
-        $pedidoStatus = "gerado automaticamente";
-        $pedidoDataCriacao = date('Y-m-d H:i:s');
 
         function organizeItems($pedidoItensParam){
             // Faz o log no formato desejado
@@ -89,6 +81,22 @@ class PedidoController extends Controller
             return $itensOrganized;
         }
 
+        function returnItemsAndQuantities($pedidoItensParam){
+            Log::channel('stderr')->info('>> PedidoController returnItemsAndQuantities: retornando quantidade dos itens do pedido.');
+            $localPedidoItensParam = $pedidoItensParam;
+            $itemsAndQuantities = collect($localPedidoItensParam)->map(function($item) {
+                return [
+                    'produto_id' => $item['produto_id'],
+                    'quantidade' => $item['quantidade'],
+                ];
+            })->toArray();
+
+
+            Log::channel('stderr')->info('>> PedidoController itemsAndQuantities: ' . json_encode($itemsAndQuantities, JSON_PRETTY_PRINT));
+
+            return $itemsAndQuantities;
+        }
+
         function calculateItemsTotal($pedidoItensParam){
             Log::channel('stderr')->info('>> PedidoController calculateItemsTotal: calculando total dos itens do pedido.');
 
@@ -104,37 +112,131 @@ class PedidoController extends Controller
             return $itemsTotal;
         }
 
-        function verifyItemsInStock($pedidoItensParam){
+        function verifyItemsInStock($pedidoItensParam, $quantidadeItensParam) {
             Log::channel('stderr')->info('>> PedidoController verifyItemsInStock: verificando se item tem em estoque.');
 
-            $localPedidoItensParam = $pedidoItensParam;
+            $itensForaEstoque = [];
 
-            return 0;
+            foreach ($pedidoItensParam as $item) {
+                $quantidadeEmEstoque = DB::table('estoque')
+                    ->where('id', $item['produto_id'])
+                    ->value('quantidade_disponivel');
+
+                if ($quantidadeEmEstoque < $item['quantidade']) {
+                    $itensForaEstoque[] = [
+                        'produto_id' => $item['produto_id'],
+                        'quantidade_solicitada' => $item['quantidade'],
+                        'quantidade_disponivel' => $quantidadeEmEstoque
+                    ];
+                }
+            }
+
+            $todosItensEmEstoque = empty($itensForaEstoque); //retorna true ou false, se for vazio 
+
+            Log::channel('stderr')->info('>> PedidoController verification: ' . json_encode([
+                'todos_itens_em_estoque' => $todosItensEmEstoque,
+                'itens_fora_estoque' => $itensForaEstoque
+            ], JSON_PRETTY_PRINT));
+
+            return [$todosItensEmEstoque, $itensForaEstoque];
+        }
+
+        function updateStock($pedidoItensParam){
+            Log::channel('stderr')->info('>> PedidoController updateStock: atualizando estoque.');
+
+            $localPedidoItensParam = $pedidoItensParam;
+            $quantidadeItensParam = $quantidadeItensParam;
+
+            foreach ($localPedidoItensParam as $item) {
+                $quantidadeItem = $quantidadeItensParam[$item['produto_id']]['quantidade'];
+                $quantidadeDisponivel = DB::table('estoque')->where('id', $item['produto_id'])->value('quantidade_disponivel');
+
+                DB::transaction(function () use ($item, $quantidadeItem, $quantidadeDisponivel){
+                    DB::table('estoque')->where('id', $item['produto_id'])->update([
+                        'quantidade_disponivel' => $quantidadeDisponivel - $quantidadeItem
+                    ]);
+                });
+            }
+
+            return true;
         }
 
 
-        function insertPedido($pedidoIdUsuarioParam, $pedidoItensParam){
+        function insertPedido($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam){
             Log::channel('stderr')->info('>> PedidoController insertPedido: inserindo pedido na base de dados.');
 
-            // $query = "SELECT * FROM estoque WHERE id = $pedidoItensParam[produto_id]";
-            // $result = DB::table('estoque')->where('id', $pedidoItensParam['produto_id'])->first();
+            // $pedidouuid = "gerado automaticamente";
+
+            $pedidoStatus = ["pendente", "processando", "enviado", "entregue", "cancelado"];
+            $pedidoDataCriacao = date('Y-m-d H:i:s');
+
+            $pedidoItensParam = json_encode($pedidoItensParam);
 
 
+            DB::transaction(function () use ($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam, $pedidoStatus, $pedidoDataCriacao) {
+                $pedido = DB::table('pedidos')->insert([
+                    'total_valor' => $pedidoTotalValorParam,
+                    'status' => $pedidoStatus[0],
+                    'data_criacao' => $pedidoDataCriacao,
+                    'itens' => $pedidoItensParam,
+                ]);
 
-            // if($result){
-            //     Log::channel('stderr')->info('>> PedidoController insertPedido: item em estoque.');
-            // }
+                Log::channel('stderr')->info('>> PedidoController insertPedido: pedido criado com sucesso.');
+                Log::channel('stderr')->info('>> PedidoController insertPedido: atualizando estoque.');
+                
+                $updateStock = updateStock($pedidoItensParam);
 
-            // $result = DB::table('pedidos')->insert($query);
+                if(!$updateStock){
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Erro ao atualizar estoque',
+                    ], 500);
+                }
+            });
 
-
-            return 0;
+            return true;
         }
 
         $pedidoItensOrganized = organizeItems($pedidoItens);
+        if(!$pedidoItensOrganized){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao organizar itens do pedido',
+            ], 500);
+        }
+
         $pedidoItensTotal = calculateItemsTotal($pedidoItensOrganized);
-        // $pedidoItensInStock = verifyItemsInStock($pedidoItensOrganized);
-        insertPedido($pedidoIdUsuario, $pedidoItensOrganized);
+        if(!$pedidoItensTotal){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao calcular total dos itens do pedido',
+            ], 500);
+        }
+
+        $pedidoItensQuantity = returnItemsAndQuantities($pedidoItensOrganized);
+        if(!$pedidoItensQuantity){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao retornar quantidade dos itens do pedido',
+            ], 500);
+        }
+
+        $pedidoItensInStock = verifyItemsInStock($pedidoItensOrganized, $pedidoItensQuantity);
+        if(!$pedidoItensInStock[0]){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao verificar se itens estão em estoque',
+                'details' => $pedidoItensInStock[1]
+            ], 403);
+        }
+
+        $insertPedido = insertPedido($pedidoIdUsuario, $pedidoItensOrganized, $pedidoItensTotal);
+        if(!$insertPedido){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao inserir pedido na base de dados',
+            ], 500);
+        }
         
 
         return response()->json([
@@ -143,7 +245,7 @@ class PedidoController extends Controller
             'pedido_id' => $pedidouuid,
             'pedido_data_criacao' => $pedidoDataCriacao,
             'pedido_status' => $pedidoStatus
-        ]);
+        ], 201);
     }
 
     public function listItens(Request $request){
