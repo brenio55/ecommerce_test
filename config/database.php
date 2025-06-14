@@ -95,6 +95,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            'options' => [
+                PDO::ATTR_STRINGIFY_FETCHES => true,
+                PDO::ATTR_TIMEOUT => 300,
+            ],
         ],
 
         'sqlsrv' => [

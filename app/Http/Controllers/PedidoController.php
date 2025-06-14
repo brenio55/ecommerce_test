@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\map;
+use Illuminate\Support\Str;
 
 
 
@@ -82,7 +83,7 @@ class PedidoController extends Controller
         }
 
         function returnItemsAndQuantities($pedidoItensParam){
-            Log::channel('stderr')->info('>> PedidoController returnItemsAndQuantities: retornando quantidade dos itens do pedido.');
+            // Log::channel('stderr')->info('>> PedidoController returnItemsAndQuantities: retornando quantidade dos itens do pedido.');
             $localPedidoItensParam = $pedidoItensParam;
             $itemsAndQuantities = collect($localPedidoItensParam)->map(function($item) {
                 return [
@@ -92,7 +93,7 @@ class PedidoController extends Controller
             })->toArray();
 
 
-            Log::channel('stderr')->info('>> PedidoController itemsAndQuantities: ' . json_encode($itemsAndQuantities, JSON_PRETTY_PRINT));
+            // Log::channel('stderr')->info('>> PedidoController itemsAndQuantities: ' . json_encode($itemsAndQuantities, JSON_PRETTY_PRINT));
 
             return $itemsAndQuantities;
         }
@@ -118,6 +119,7 @@ class PedidoController extends Controller
             $itensForaEstoque = [];
 
             foreach ($pedidoItensParam as $item) {
+                Log::channel('stderr')->info('>> PedidoController verifyItemsInStock conectando ao banco de dados.');
                 $quantidadeEmEstoque = DB::table('estoque')
                     ->where('id', $item['produto_id'])
                     ->value('quantidade_disponivel');
@@ -129,6 +131,7 @@ class PedidoController extends Controller
                         'quantidade_disponivel' => $quantidadeEmEstoque
                     ];
                 }
+                Log::channel('stderr')->info('>> PedidoController verifyItemsInStock item: ' . json_encode($item, JSON_PRETTY_PRINT));
             }
 
             $todosItensEmEstoque = empty($itensForaEstoque); //retorna true ou false, se for vazio 
@@ -141,20 +144,24 @@ class PedidoController extends Controller
             return [$todosItensEmEstoque, $itensForaEstoque];
         }
 
-        function updateStock($pedidoItensParam){
+        function updateStock($pedidoItensParam, $quantidadeItensParam){
             Log::channel('stderr')->info('>> PedidoController updateStock: atualizando estoque.');
 
-            $localPedidoItensParam = $pedidoItensParam;
-            $quantidadeItensParam = $quantidadeItensParam;
-
+            $localPedidoItensParam = json_decode($pedidoItensParam, true);
+            Log::channel('stderr')->info('>> PedidoController updateStock localPedidoItensParam: ' . json_encode($localPedidoItensParam, JSON_PRETTY_PRINT));
+            
             foreach ($localPedidoItensParam as $item) {
-                $quantidadeItem = $quantidadeItensParam[$item['produto_id']]['quantidade'];
-                $quantidadeDisponivel = DB::table('estoque')->where('id', $item['produto_id'])->value('quantidade_disponivel');
+                $quantidadeItem = $item['quantidade'];
+                $quantidadeDisponivel = DB::table('estoque')
+                    ->where('id', $item['produto_id'])
+                    ->value('quantidade_disponivel');
 
                 DB::transaction(function () use ($item, $quantidadeItem, $quantidadeDisponivel){
-                    DB::table('estoque')->where('id', $item['produto_id'])->update([
-                        'quantidade_disponivel' => $quantidadeDisponivel - $quantidadeItem
-                    ]);
+                    DB::table('estoque')
+                        ->where('id', $item['produto_id'])
+                        ->update([
+                            'quantidade_disponivel' => $quantidadeDisponivel - $quantidadeItem
+                        ]);
                 });
             }
 
@@ -162,31 +169,37 @@ class PedidoController extends Controller
         }
 
 
-        function insertPedido($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam){
+        function insertPedido($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam, $pedidoItensQuantityParam, $pedidouuidParam, $pedidoDataCriacaoParam, $pedidoStatusParam){
             Log::channel('stderr')->info('>> PedidoController insertPedido: inserindo pedido na base de dados.');
 
-            // $pedidouuid = "gerado automaticamente";
+            
 
-            $pedidoStatus = ["pendente", "processando", "enviado", "entregue", "cancelado"];
-            $pedidoDataCriacao = date('Y-m-d H:i:s');
+            
+            // $pedidoDataCriacao = date('Y-m-d H:i:s');
 
             $pedidoItensParam = json_encode($pedidoItensParam);
+            // $pedidoItensQuantity = $pedidoItensQuantityParam;
+            
 
-
-            DB::transaction(function () use ($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam, $pedidoStatus, $pedidoDataCriacao) {
+            DB::transaction(function () use ($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam, $pedidoStatusParam, $pedidoDataCriacaoParam, $pedidoItensQuantityParam, $pedidouuidParam) {
+                
                 $pedido = DB::table('pedidos')->insert([
+                    'id_usuario' => $pedidoIdUsuarioParam,
+                    'data_pedido' => $pedidoDataCriacaoParam,
+                    'status' => $pedidoStatusParam[0],
                     'total_valor' => $pedidoTotalValorParam,
-                    'status' => $pedidoStatus[0],
-                    'data_criacao' => $pedidoDataCriacao,
-                    'itens' => $pedidoItensParam,
+                    'itens_pedido' => $pedidoItensParam,
+                    'id' => $pedidouuidParam,
                 ]);
 
                 Log::channel('stderr')->info('>> PedidoController insertPedido: pedido criado com sucesso.');
                 Log::channel('stderr')->info('>> PedidoController insertPedido: atualizando estoque.');
                 
-                $updateStock = updateStock($pedidoItensParam);
+                $updateStock = updateStock($pedidoItensParam, $pedidoItensQuantityParam);
 
                 if(!$updateStock){
+                    Log::channel('stderr')->info('>> PedidoController insertPedido: erro ao atualizar estoque.');
+
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Erro ao atualizar estoque',
@@ -230,7 +243,10 @@ class PedidoController extends Controller
             ], 403);
         }
 
-        $insertPedido = insertPedido($pedidoIdUsuario, $pedidoItensOrganized, $pedidoItensTotal);
+        $pedidouuid = Str::uuid();
+        $pedidoDataCriacao = date('Y-m-d H:i:s');
+        $pedidoStatus = ["pendente", "processando", "enviado", "entregue", "cancelado"];
+        $insertPedido = insertPedido($pedidoIdUsuario, $pedidoItensOrganized, $pedidoItensTotal, $pedidoItensQuantity, $pedidouuid, $pedidoDataCriacao, $pedidoStatus);
         if(!$insertPedido){
             return response()->json([
                 'status' => 'error',
