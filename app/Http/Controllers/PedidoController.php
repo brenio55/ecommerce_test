@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\map;
 
 
 
@@ -57,33 +58,83 @@ class PedidoController extends Controller
 
 
         $pedidoIdUsuario = $request->input('pedido_id_usuario');
-        $pedidoTotalValor = $request->input('pedido_total_valor');
         $pedidoItens = $request->input('pedido_itens');
-
         $pedidoItens = json_decode($pedidoItens, true);
 
-        // $pedidoItens = collect($pedidoItens)->map(function($item){
-        //     return [
-        //         'produto_id' => $item['produto_id'],
-        //         'quantidade' => $item['quantidade'],
-        //         'valor_unitario_atTheTime' => $item['valor_unitario_atTheTime'],
-        //     ];
-        // });
-        Log::channel('stderr')->info('>> PedidoController pedidoItens: ' . json_encode($pedidoItens));
-
         $pedidouuid = "gerado automaticamente";
-        $pedidoDataCriacao = date('Y-m-d H:i:s');
+        $pedidoTotalValor = "gerado automaticamente";
         $pedidoStatus = "gerado automaticamente";
+        $pedidoDataCriacao = date('Y-m-d H:i:s');
 
-        function insertPedido($pedidoIdUsuarioParam, $pedidoTotalValorParam, $pedidoItensParam){
-            // $query = "INSERT INTO pedidos (pedido_id_usuario, pedido_total_valor, pedido_itens) VALUES ($pedidoIdUsuarioParam, $pedidoTotalValorParam, $pedidoItensParam)";
+        function organizeItems($pedidoItensParam){
+            // Faz o log no formato desejado
+            $localPedidoItensParam = $pedidoItensParam;
+            Log::channel('stderr')->info('>> PedidoController pedidoItens decoded: ' . json_encode($localPedidoItensParam, JSON_PRETTY_PRINT));
+
+            // Continua o processamento com o map
+            $pedidoItens = collect($localPedidoItensParam)->map(function($item) {
+                return [
+                    'produto_id' => $item['produto_id'],
+                    'quantidade' => $item['quantidade'],
+                    'valor_unitario_atTheTime' => $item['valor_unitario_atTheTime'],
+                ];
+            })->toArray();
+
+            // $pedidoItens = json_encode($pedidoItens);
+            
+
+            Log::channel('stderr')->info('>> PedidoController localPedidoItensParam mapped: ' . json_encode($localPedidoItensParam, JSON_PRETTY_PRINT));
+            $itensOrganized = $localPedidoItensParam;
+
+            return $itensOrganized;
+        }
+
+        function calculateItemsTotal($pedidoItensParam){
+            Log::channel('stderr')->info('>> PedidoController calculateItemsTotal: calculando total dos itens do pedido.');
+
+            $localPedidoItensParam = $pedidoItensParam;
+
+            $itemsTotal = collect($localPedidoItensParam)->map(function($item) {
+                return $item['quantidade'] * $item['valor_unitario_atTheTime'];
+            })->sum();
+            
+
+            Log::channel('stderr')->info('>> PedidoController itemsTotal: ' . $itemsTotal);
+
+            return $itemsTotal;
+        }
+
+        function verifyItemsInStock($pedidoItensParam){
+            Log::channel('stderr')->info('>> PedidoController verifyItemsInStock: verificando se item tem em estoque.');
+
+            $localPedidoItensParam = $pedidoItensParam;
+
+            return 0;
+        }
+
+
+        function insertPedido($pedidoIdUsuarioParam, $pedidoItensParam){
+            Log::channel('stderr')->info('>> PedidoController insertPedido: inserindo pedido na base de dados.');
+
+            // $query = "SELECT * FROM estoque WHERE id = $pedidoItensParam[produto_id]";
+            // $result = DB::table('estoque')->where('id', $pedidoItensParam['produto_id'])->first();
+
+
+
+            // if($result){
+            //     Log::channel('stderr')->info('>> PedidoController insertPedido: item em estoque.');
+            // }
 
             // $result = DB::table('pedidos')->insert($query);
 
-            // return $result;
+
+            return 0;
         }
 
-        // insertPedido($pedidoIdUsuario, $pedidoTotalValor, $pedidoItens);
+        $pedidoItensOrganized = organizeItems($pedidoItens);
+        $pedidoItensTotal = calculateItemsTotal($pedidoItensOrganized);
+        // $pedidoItensInStock = verifyItemsInStock($pedidoItensOrganized);
+        insertPedido($pedidoIdUsuario, $pedidoItensOrganized);
         
 
         return response()->json([
