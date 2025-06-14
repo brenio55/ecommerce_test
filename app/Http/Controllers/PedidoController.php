@@ -41,6 +41,13 @@ class PedidoController extends Controller
     //     );
     //     return $supabase;
     // }
+
+    // private function checkUserExists($userId){
+    //     $query = "SELECT * FROM usuarios WHERE id = $userId";
+    //     $result = DB::table('usuarios')->where('id', $userId)->first();
+    //     return $result;
+    // }
+
     public function create(Request $request){
         Log::channel('stderr')->info('>> .env SUPABASE_URL: ' . env('SUPABASE_URL'));
         Log::channel('stderr')->info('>> .env SUPABASE_ANON_KEY: ' . env('SUPABASE_ANON_KEY'));
@@ -67,6 +74,10 @@ class PedidoController extends Controller
         $pedidouuid = "gerado automaticamente";
         $pedidoDataCriacao = date('Y-m-d H:i:s');
         $pedidoStatus = "gerado automaticamente";
+
+        function insertPedido($pedidoIdUsuario, $pedidoTotalValor, $pedidoItens){
+            
+        }
         
 
         return response()->json([
@@ -83,12 +94,12 @@ class PedidoController extends Controller
         Log::channel('stderr')->info('>> PedidoController.listItens recebido: ' . json_encode($request->all()));
 
         $query = "SELECT * FROM estoque";
-        $result = DB::select($query);
+        $result = DB::table('estoque')->get();
 
         return response()->json([
             'status' => 'success',
             'message' => 'Pedido itens listados com sucesso',
-            'pedido_id' => $pedidoId,
+            'itens' => json_encode($result),
         ]);
     }
 }
