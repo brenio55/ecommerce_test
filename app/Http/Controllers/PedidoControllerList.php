@@ -33,26 +33,12 @@ use Illuminate\Support\Str;
  * 
  */
 
-class PedidoController extends Controller
+class PedidoControllerList extends Controller
 {
 
-    // public function accessSupabaseDatabase(){
-    //     $supabase = new Client(
-    //         env('DB_URL'),
-    //         env('DB_ANON_KEY')
-    //     );
-    //     return $supabase;
-    // }
-
-    // private function checkUserExists($userId){
-    //     $query = "SELECT * FROM usuarios WHERE id = $userId";
-    //     $result = DB::table('usuarios')->where('id', $userId)->first();
-    //     return $result;
-    // }
-
-    public function create(Request $request){
-        Log::channel('stderr')->info('>> Requisição recebida em PedidoController. ');
-        Log::channel('stderr')->info('>> PedidoController recebido: ' . json_encode($request->all()));
+    public function list(Request $request){
+        Log::channel('stderr')->info('>> Requisição recebida em PedidoControllerList. ');
+        Log::channel('stderr')->info('>> PedidoControllerList recebido: ' . json_encode($request->all()));
 
 
         $pedidoIdUsuario = $request->input('pedido_id_usuario');
@@ -169,24 +155,17 @@ class PedidoController extends Controller
         }
 
 
-        function insertPedido($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam, $pedidoItensQuantityParam, $pedidouuidParam, $pedidoDataCriacaoParam, $pedidoStatusParam){
+        function insertPedido($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam, $pedidoItensQuantityParam, $pedidouuidParam, $pedidoDataCriacaoParam, $pedidoStatusCodesParam){
             Log::channel('stderr')->info('>> PedidoController insertPedido: inserindo pedido na base de dados.');
 
-            
-
-            
-            // $pedidoDataCriacao = date('Y-m-d H:i:s');
-
             $pedidoItensParam = json_encode($pedidoItensParam);
-            // $pedidoItensQuantity = $pedidoItensQuantityParam;
-            
 
-            DB::transaction(function () use ($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam, $pedidoStatusParam, $pedidoDataCriacaoParam, $pedidoItensQuantityParam, $pedidouuidParam) {
+            DB::transaction(function () use ($pedidoIdUsuarioParam, $pedidoItensParam, $pedidoTotalValorParam, $pedidoStatusCodesParam, $pedidoDataCriacaoParam, $pedidoItensQuantityParam, $pedidouuidParam) {
                 
                 $pedido = DB::table('pedidos')->insert([
                     'id_usuario' => $pedidoIdUsuarioParam,
                     'data_pedido' => $pedidoDataCriacaoParam,
-                    'status' => $pedidoStatusParam[0],
+                    'status' => $pedidoStatusCodesParam->pendente,
                     'total_valor' => $pedidoTotalValorParam,
                     'itens_pedido' => $pedidoItensParam,
                     'id' => $pedidouuidParam,
@@ -245,8 +224,15 @@ class PedidoController extends Controller
 
         $pedidouuid = Str::uuid();
         $pedidoDataCriacao = date('Y-m-d H:i:s');
-        $pedidoStatus = ["pendente", "processando", "enviado", "entregue", "cancelado"];
-        $insertPedido = insertPedido($pedidoIdUsuario, $pedidoItensOrganized, $pedidoItensTotal, $pedidoItensQuantity, $pedidouuid, $pedidoDataCriacao, $pedidoStatus);
+        $pedidoStatusCodes = (object) [
+            'pendente' => "pendente",
+            'processando' => "processando",
+            'enviado' => "enviado",
+            'entregue' => "entregue",
+            'cancelado' => "cancelado",
+        ];
+        
+        $insertPedido = insertPedido($pedidoIdUsuario, $pedidoItensOrganized, $pedidoItensTotal, $pedidoItensQuantity, $pedidouuid, $pedidoDataCriacao, $pedidoStatusCodes);
         if(!$insertPedido){
             return response()->json([
                 'status' => 'error',
@@ -260,7 +246,7 @@ class PedidoController extends Controller
             'message' => 'Pedido criado com sucesso',
             'pedido_id' => $pedidouuid,
             'pedido_data_criacao' => $pedidoDataCriacao,
-            'pedido_status' => $pedidoStatus
+            'pedido_status' => $pedidoStatusCodes->pendente
         ], 201);
     }
 
