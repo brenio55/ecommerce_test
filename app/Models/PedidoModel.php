@@ -23,4 +23,12 @@ class PedidoModel extends Model
         'cancelado' => 'cancelado',
         'entregue' => 'entregue',
     ];
+
+    const COLUNAS = [
+        'id' => 'id',
+        'id_usuario' => 'id_usuario',
+        'status' => 'status',
+        'data_pedido' => 'data_pedido',
+        'total_valor' => 'total_valor',
+    ];
 }

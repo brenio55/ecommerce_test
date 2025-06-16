@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PedidoModel;
 
 class PedidoModelList extends Model
 {
@@ -11,13 +12,7 @@ class PedidoModelList extends Model
     public $incrementing = false; // Não incrementa o ID automaticamente
     protected $keyType = 'string'; // Tipo da chave primária
     
-    const COLUNAS = [
-        'id' => 'id',
-        'id_usuario' => 'id_usuario',
-        'status' => 'status',
-        'data_pedido' => 'data_pedido',
-        'total_valor' => 'total_valor',
-    ];
+    const COLUNAS = PedidoModel::COLUNAS;
 
     //direction = 'asc' ou 'desc'
     const DIRECTION = [
