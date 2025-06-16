@@ -8,7 +8,15 @@ use Illuminate\Support\Facades\DB;
 
 class PedidoModelList extends Model
 {
-    protected $table = 'pedidos';
+    // Configurações para o Eloquent do Laravel
+    protected $table = 'pedidos'; // Nome da tabela no banco de dados
+    public $incrementing = false; // Não incrementa o ID automaticamente
+    protected $keyType = 'string'; // Tipo da chave primária
+    protected $casts = [
+        'id' => 'string', // Converte o ID para string
+    ];
+
+    CONST TABLE = 'pedidos';
 
     // Constants para tipos de listagem
     const LIST_TYPES = [
@@ -40,7 +48,7 @@ class PedidoModelList extends Model
             return $query->get();
 
             Log::channel('stderr')->info('>> PedidoModelList listAll falhou. Tentando novamente...');
-        }, self::RETRY_DELAY); // 100ms entre tentativas
+        }, self::RETRY_DELAY); 
     }
 
     public function scopeListByStatus($query, $status)
@@ -54,5 +62,23 @@ class PedidoModelList extends Model
         $isValidStatus = array_key_exists($status, self::STATUS_TYPES);
         Log::channel('stderr')->info('>> PedidoModelList isValidStatus: ' . $isValidStatus);
         return $isValidStatus;
+    }
+    
+    public static function isValidId($id){
+        $isValidId = DB::table(self::TABLE)->where('id_usuario', $id)->exists();
+        Log::channel('stderr')->info('>> PedidoModelList isValidId: ' . $isValidId);
+        return $isValidId;
+    }
+
+    public function scopeGetPedidoByUserId($query, $userId){
+        $pedido = DB::table($this->table)->where('id_usuario', $userId)->get();
+        Log::channel('stderr')->info('>> PedidoModelList getPedidoByUserId: ' . $pedido);
+        return $pedido;
+    }
+
+    public function scopeGetPedidoDetails($query, $pedidoId){
+        $pedido = DB::table($this->table)->where('id', $pedidoId)->get();
+        Log::channel('stderr')->info('>> PedidoModelList getPedidoDetails: ' . $pedido);
+        return $pedido;
     }
 }
