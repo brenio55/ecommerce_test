@@ -3,8 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 class PedidoModelList extends Model
 {
@@ -12,73 +10,83 @@ class PedidoModelList extends Model
     protected $table = 'pedidos'; // Nome da tabela no banco de dados
     public $incrementing = false; // Não incrementa o ID automaticamente
     protected $keyType = 'string'; // Tipo da chave primária
-    protected $casts = [
-        'id' => 'string', // Converte o ID para string
-    ];
-
-    CONST TABLE = 'pedidos';
-
-    // Constants para tipos de listagem
-    const LIST_TYPES = [
-        'default' => 'all',
-        'all_with_page' => 'page',
-        'all_with_status' => 'status',
-        'all' => 'all',
-    ];
-
-    const STATUS_TYPES = [
-        'default' => 'pendente',
-        'processando' => 'processando',
-        'enviado' => 'enviado',
-        'cancelado' => 'cancelado',
-        'entregue' => 'entregue',
-    ];
-
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 100; // 100ms entre tentativas
-
-    public function scopeListAll($query, $ordersPerPage = null, $page = null)
-    {
-        return retry(self::MAX_RETRIES, function() use ($query, $ordersPerPage, $page) {
-            
-            if ($ordersPerPage && $page) {
-                return $query->paginate($ordersPerPage);
-            }
-            
-            return $query->get();
-
-            Log::channel('stderr')->info('>> PedidoModelList listAll falhou. Tentando novamente...');
-        }, self::RETRY_DELAY); 
-    }
-
-    public function scopeListByStatus($query, $status)
-    {
-        $result = DB::table($this->table)->where('status', $status)->get();
-        return $result;
-    }
-
-    public static function isValidStatus($status){
-        
-        $isValidStatus = array_key_exists($status, self::STATUS_TYPES);
-        Log::channel('stderr')->info('>> PedidoModelList isValidStatus: ' . $isValidStatus);
-        return $isValidStatus;
-    }
     
-    public static function isValidId($id){
-        $isValidId = DB::table(self::TABLE)->where('id_usuario', $id)->exists();
-        Log::channel('stderr')->info('>> PedidoModelList isValidId: ' . $isValidId);
-        return $isValidId;
+    const COLUNAS = [
+        'id' => 'id',
+        'id_usuario' => 'id_usuario',
+        'status' => 'status',
+        'data_pedido' => 'data_pedido',
+        'total_valor' => 'total_valor',
+    ];
+
+    //direction = 'asc' ou 'desc'
+    const DIRECTION = [
+        'direction' => 'direction',
+        'asc' => 'asc',
+        'desc' => 'desc',
+    ];
+
+    const ORDER_BY = [
+        'data_pedido' => 'data_pedido',
+        'total_valor' => 'total_valor',
+    ];
+    
+    public static function aplicarFiltros($request)
+    {
+        $query = self::query();
+
+        if ($request->has('order_by') && !$request->has('direction')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'O parâmetro direction é obrigatório quando order_by é informado',
+                
+            ], 400);
+        }
+
+        if (!$request->has('per_page')) {
+            return $query
+            ->aplicarFiltroStatus($request->input(self::COLUNAS['status']))
+            ->aplicarFiltroUsuario($request->input(self::COLUNAS['id_usuario']))
+            ->aplicarOrdenacao($request->input('order_by'), $request->input(self::DIRECTION['direction']))
+            ->get();
+        }
+
+        if ($request->has('per_page')) {
+            return $query
+            ->aplicarFiltroStatus($request->input(self::COLUNAS['status']))
+            ->aplicarFiltroUsuario($request->input(self::COLUNAS['id_usuario']))
+            ->aplicarOrdenacao($request->input('order_by'), $request->input(self::DIRECTION['direction']))
+            ->paginate($request->input('per_page', 10));
+        }
     }
 
-    public function scopeGetPedidoByUserId($query, $userId){
-        $pedido = DB::table($this->table)->where('id_usuario', $userId)->get();
-        Log::channel('stderr')->info('>> PedidoModelList getPedidoByUserId: ' . $pedido);
-        return $pedido;
+    
+    public function scopeAplicarFiltroStatus($query, $status = null)
+    {
+        if ($status) {
+            return $query->where('status', $status);
+        }
+        return $query;
     }
 
-    public function scopeGetPedidoDetails($query, $pedidoId){
-        $pedido = DB::table($this->table)->where('id', $pedidoId)->get();
-        Log::channel('stderr')->info('>> PedidoModelList getPedidoDetails: ' . $pedido);
-        return $pedido;
+    
+    public function scopeAplicarFiltroUsuario($query, $usuarioId = null)
+    {
+        if ($usuarioId) {
+            return $query->where('id_usuario', $usuarioId);
+        }
+        return $query;
+    }
+
+    // Ordenação
+    public function scopeAplicarOrdenacao($query, $orderBy = null, $direction = 'desc')
+    {
+        $camposPermitidos = ['data_pedido', 'total_valor'];
+        
+        if ($orderBy && in_array($orderBy, $camposPermitidos)) {
+            return $query->orderBy($orderBy, $direction);
+        }
+        
+        return $query->orderBy('data_pedido', 'desc'); // ordenação padrão
     }
 }
