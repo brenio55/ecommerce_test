@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build:
@@ -13,7 +15,16 @@ services:
       - APP_ENV=local
     env_file:
       - .env
+    dns:
+      - 8.8.8.8
+    networks:
+      - ip6net   # serviço usa rede com IPv6
 
 networks:
-  default:
+  ip6net:
     driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 2001:db8::/64

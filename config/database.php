@@ -94,12 +94,14 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
-            'options' => [
+            'sslmode' => env('DB_SSLMODE', 'require'),
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
                 PDO::ATTR_STRINGIFY_FETCHES => true,
                 PDO::ATTR_TIMEOUT => 300,
-            ],
+            ]) : [],
         ],
+
+        //Adicionado require no SSL Mode para evitar erro de conexão no Supabase
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',
