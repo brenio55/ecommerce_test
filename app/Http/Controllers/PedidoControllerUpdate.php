@@ -18,19 +18,27 @@ class PedidoControllerUpdate extends Controller
         $idReceived = $request->input(PedidoModel::COLUNAS['id']);
         $statusReceived = $request->input(PedidoModel::COLUNAS['status']);
 
+        Log::channel('stderr')->info('>> ID recebido: ' . $idReceived);
+        Log::channel('stderr')->info('>> Status recebido: ' . $statusReceived);
+
         $pedido = PedidoModelUpdate::updatePedidoStatus($idReceived, $statusReceived);
+
+        if (is_a($pedido, 'Illuminate\Http\JsonResponse')) {
+            return $pedido; // Retorna a resposta de erro se houver
+        }
+
+        if (!$pedido || (is_array($pedido) && empty($pedido))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Nenhum pedido encontrado',
+                'data' => []
+            ], 404);
+        }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Status do pedido atualizado com sucesso',
             'data' => $pedido
         ]);
-            
-        
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Status do pedido não atualizado. Erro interno.',
-            'data' => []
-        ], 500);
     }
 }

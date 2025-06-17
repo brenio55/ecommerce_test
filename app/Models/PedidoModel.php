@@ -18,6 +18,7 @@ class PedidoModel extends Model
 
     const STATUS_TYPES = [
         'default' => 'pendente',
+        'pendente' => 'pendente',
         'processando' => 'processando',
         'enviado' => 'enviado',
         'cancelado' => 'cancelado',
