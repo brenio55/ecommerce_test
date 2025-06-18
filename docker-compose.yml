@@ -10,7 +10,9 @@ services:
     volumes:
       - .:/app
     working_dir: /app
-    command: php artisan serve --host=0.0.0.0 --port=8000
+    command: >
+      sh -c "composer install --no-interaction --no-scripts &&
+             php artisan serve --host=0.0.0.0 --port=8000"
     environment:
       - APP_ENV=local
     env_file:
