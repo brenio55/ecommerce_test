@@ -26,15 +26,16 @@ Aplicação teste de e-commerce desenvolvida com Laravel e Supabase.
 cd ecommerceApp
 ```
 
-2. Instale as dependências do PHP:
+2. Instale o PHP, o Composer e suas dependências:
+- Vai ser necessário que você instale o PHP, adicione eles às suas variáveis de ambiente, e logo em seguida instale o Composer. Após isto, rode este comando dentro da pasta do projeto:
+
 ```bash
 composer install
 ```
 
-3. Configure o ambiente:
+3. Adicione o arquivo ENV:
 ```bash
-cp .env.example .env
-php artisan key:generate
+cat .env
 ```
 
 4. Configure seu banco de dados no arquivo `.env`:
@@ -48,6 +49,8 @@ DB_PASSWORD="senhaDoBanco"
 DB_CONNECTION_TIMEOUT=300
 ```
 
+- Estas informações devem estar disponíveis no e-mail que enviei sobre o projeto.
+
 5. Execute as migrações do banco de dados (a ser implementado):
 ```bash
 php artisan migrate
@@ -59,17 +62,74 @@ php artisan serve
 ```
 
 Os endpoints estarão disponíveis em `http://localhost:8000`
+Informações sobre como fazer as requisições estão disponíveis em DOCS.md no diretório raiz deste projeto.
 
 ## Instalação com Docker
 
 1. Instale o Docker no seu computador
 
-2. Execute na raiz do projeto, onde existem os arquivos do Docker, os comandos abaixo:
+2. Adicione estas configurações no seu Docker Engine ou nas configurações JSON do seu Docker Daemon:
+
+Devido a limitações do banco de dados Supabase de receber requisições em IPv4, teremos que habilitar o Docker para trabalhar apenas com IPv6, o procedimento para este é o abaixo:
 
 ```bash
-    docker compose up
+No windows:
+    1: Habilitar IPv6 no Docker Desktop
+
+    2. Abra o Docker Desktop.
+
+    3. Clique no ícone de engrenagem (Settings) no canto superior direito.
+    4. No menu lateral, vá para a seção Docker Engine.
+    
+    Você verá uma tela de edição de texto para o arquivo de configuração. Por favor, adicione as seguintes linhas dentro das chaves 
+
+    {    
+        "ipv6": true,
+        "fixed-cidr-v6": "2001:db8:1::/64"
+    }
+
+    5. Clique no botão "Apply & Restart". O Docker irá reiniciar para aplicar as novas configurações.
+
+    Importante: Se já houver algum texto lá, apenas adicione as novas linhas, separando-as com uma vírgula. O JSON deve ficar parecido com isto caso exista algum texto lá:
+
+    {
+      "builder": {
+        "gc": {
+          "enabled": true,
+          "defaultKeepStorage": "20GB"
+        }
+      },
+      "experimental": false,
+      "ipv6": true,
+      "fixed-cidr-v6": "2001:db8:1::/64"
+    }
+
+    ----------------------------------------------------------
+
+No Linux:
+
+    1. Edite o arquivo de configuração do daemon do Docker, localizado em: 
+        /etc/docker/daemon.json
+
+    2. Configure os seguintes parâmetros:
+        {
+            "ipv6": true,
+            "fixed-cidr-v6": "2001:db8:1::/64"
+        }
+
+    3. Salve o arquivo de configuração.
+        Para que as alterações tenham efeito, reinicie o serviço do Docker com o seguinte comando:
+        
+        sudo systemctl restart docker
+    
 ```
-3. O endpoint estará ouvindo requisições corretamente.
+
+3. Após habilitar o IPv6 no Docker, inicie o Docker Engine e execute na raiz do projeto, onde existem os arquivos do Docker, os comandos abaixo:
+
+```bash
+    docker-compose up
+```
+4. O endpoint estará ouvindo requisições corretamente.
 
 ## Comandos Úteis em outros casos
 ### Comandos Laravel
