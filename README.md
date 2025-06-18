@@ -56,7 +56,18 @@ DB_CONNECTION_TIMEOUT=300
 php artisan migrate
 ```
 
-6. Inicie o servidor:
+6. Configure seu PHP.ini para ter acesso ao pdo_pgsql e pgsql
+- Estas são configurações para liberar os drivers de acesso do PHP ao tipo de banco de dados Postgree, que geralmente veêm desabilitadas por padrão.
+
+Você precisa entrar no arquivo php.ini e descomentar (tirar o ";") da frente, onde deverá parecer desta forma após a edição:
+
+```bash
+    extension=pdo_pgsql
+    extension=pdo_sqlite
+    extension=pgsql
+```
+
+7. Inicie o servidor e começe a fazer as requisições com:
 ```bash
 php artisan serve
 ```
