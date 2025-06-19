@@ -9,7 +9,7 @@ Aplicação teste de e-commerce desenvolvida com Laravel e Supabase.
 ## Tecnologias Utilizadas
 
 - Laravel (Framework PHP)
-- ESLint e Prettier (Formatação e qualidade de código)
+- Prettier (Formatação e qualidade de código)
 - PostgreeSQL (Banco de dados)
 
 ## Requisitos do Sistema (Sem Docker)
@@ -18,6 +18,10 @@ Aplicação teste de e-commerce desenvolvida com Laravel e Supabase.
 - Composer
 - XAMPP, WAMP, MAMP ou servidor web similar
 - Docker (opcional para facilitação de execução)
+
+## Advise
+
+- Utilizei para fazer o banco de dados do projeto o Supabase, mas às vezes ele dá um bug de timeout e/ou com o Docker ele fica com problemas para aceitar conexões IPv4, que é o padrão do Docker, então tive que fazer um workaround para que funcionasse. Caso não funcione com o Docker, tente a instalação local, e caso o Supabase dê timeout, tente novamente que a requisição deve funcionar normal -- corrigiria isto com mais tempo, encontrei este bug no meio do projeto.
 
 ## Instalação Local (Sem Docker)
 
@@ -53,7 +57,8 @@ DB_CONNECTION_TIMEOUT=300
 
 5. Execute as migrações do banco de dados (a ser implementado):
 ```bash
-php artisan migrate
+php artisan migrate 
+php artisan db:seed
 ```
 
 6. Configure seu PHP.ini para ter acesso ao pdo_pgsql e pgsql
@@ -69,7 +74,7 @@ Você precisa entrar no arquivo php.ini e descomentar (tirar o ";") da frente, o
 
 7. Inicie o servidor e começe a fazer as requisições com:
 ```bash
-php artisan serve
+php artisan serve 
 ```
 
 Os endpoints estarão disponíveis em `http://localhost:8000`
@@ -140,23 +145,9 @@ No Linux:
 ```bash
     docker-compose up
 ```
-4. O endpoint estará ouvindo requisições corretamente.
+4. O endpoint estará ouvindo requisições corretamente em `http://localhost:8000`
 
 ## Comandos Úteis em outros casos
-### Comandos Laravel
-```bash
-# Criar migration
-php artisan make:migration nome_da_migration
-
-# Criar controller
-php artisan make:controller NomeController
-
-# Criar model
-php artisan make:model NomeModel
-
-# Limpar cache
-php artisan cache:clear
-```
 
 ### Comandos Docker
 ```bash
@@ -164,16 +155,7 @@ php artisan cache:clear
 docker-compose up
 
 # Parar containers
-docker-compose down
-
-# Logs
-docker-compose logs -f
-
-# Acessar container da aplicação
-docker-compose exec app bash
-
-# Acessar MySQL
-docker-compose exec mysql mysql -u root -p
+docker-compose down \ CTRL + C
 
 # Refazer todos os containers e volumes
 docker system prune -a
@@ -191,18 +173,9 @@ docker-compose up
 - `storage/` - Arquivos de upload e logs
 - `tests/` - Testes automatizados
 - `vendor/` - Dependências PHP (Composer)
-- `node_modules/` - Dependências JavaScript (NPM)
 
 ## Documentação de Rotas / Endpoints
 - A documentação das rotas e endpoints está disponível no arquivo DOCS.md, na raiz deste projeto.
-
-## Desenvolvimento
-
-O projeto utiliza:
-- ESLint para linting de JavaScript/TypeScript
-- Prettier para formatação de código
-- Vite para compilação de assets
-- PHPUnit para testes
 
 ## Informações Adicionais
 Este é apenas um repositório teste sem fins de utilização para produção.

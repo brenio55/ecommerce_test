@@ -2,6 +2,31 @@
 
 ## Endpoints de Pedidos
 
+Informações importantes sobre o estoque:
+
+Ao tentar criar um novo pedido, é feita uma solicitação para o banco de dados para verificar se é possível criar este pedido de acordo com quantidade de itens no estoque.
+
+Após ser executada a migração, deverá ser criado três itens:
+
+```bash
+  DB::table('estoque')->insert([
+            [
+                'item_nome' => 'Pendrive Ultra Mega Blaster 16GB',
+                'quantidade_disponivel' => 10,
+            ],
+            [
+                'item_nome' => 'Mouse Gamer Ultra Mega Blaster 16GB',
+                'quantidade_disponivel' => 20,
+            ],
+            [
+                'item_nome' => 'TV 4K Ultra HD Quality Doubly 45"',
+                'quantidade_disponivel' => 15,
+            ],
+        ]);
+```
+
+com id 1, 2 e 3 respectivamente. Para criar um pedido e ser descontado do estoque conforme acima, é necessário inserir o "produto_id" correto na requisição. Dito isto, segue os endpoints abaixo.
+
 ### 1. Criar Novo Pedido",
     "pedido_id_usuario" : 2,
     "pedido_itens": [

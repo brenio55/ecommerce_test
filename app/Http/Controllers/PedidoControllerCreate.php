@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\map;
 use Illuminate\Support\Str;
+use App\Models\PedidoModel;
 
 
 class PedidoControllerCreate extends Controller
@@ -137,11 +138,19 @@ class PedidoControllerCreate extends Controller
                 $pedido = DB::table('pedidos')->insert([
                     'id_usuario' => $pedidoIdUsuarioParam,
                     'data_pedido' => $pedidoDataCriacaoParam,
-                    'status' => $pedidoStatusCodesParam->pendente,
+                    'status' => $pedidoStatusCodesParam['pendente'],
                     'total_valor' => $pedidoTotalValorParam,
                     'itens_pedido' => $pedidoItensParam,
                     'id' => $pedidouuidParam,
                 ]);
+
+                if (!$pedido){
+                    Log::channel('stderr')->info('>> PedidoController insertPedido: erro ao inserir pedido na base de dados.');
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Erro ao inserir pedido na base de dados',
+                    ], 500);
+                }
 
                 Log::channel('stderr')->info('>> PedidoController insertPedido: pedido criado com sucesso.');
                 Log::channel('stderr')->info('>> PedidoController insertPedido: atualizando estoque.');
@@ -196,13 +205,7 @@ class PedidoControllerCreate extends Controller
 
         $pedidouuid = Str::uuid();
         $pedidoDataCriacao = date('Y-m-d H:i:s');
-        $pedidoStatusCodes = (object) [
-            'pendente' => "pendente",
-            'processando' => "processando",
-            'enviado' => "enviado",
-            'entregue' => "entregue",
-            'cancelado' => "cancelado",
-        ];
+        $pedidoStatusCodes = PedidoModel::STATUS_TYPES;
         
         $insertPedido = insertPedido($pedidoIdUsuario, $pedidoItensOrganized, $pedidoItensTotal, $pedidoItensQuantity, $pedidouuid, $pedidoDataCriacao, $pedidoStatusCodes);
         if(!$insertPedido){
@@ -216,9 +219,11 @@ class PedidoControllerCreate extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Pedido criado com sucesso',
-            'pedido_id' => $pedidouuid,
-            'pedido_data_criacao' => $pedidoDataCriacao,
-            'pedido_status' => $pedidoStatusCodes->pendente
+            'data' => [ 
+                'pedido_id' => $pedidouuid,
+                'pedido_data_criacao' => $pedidoDataCriacao,
+                'pedido_status' => $pedidoStatusCodes['pendente']
+            ]
         ], 201);
     }
 }
