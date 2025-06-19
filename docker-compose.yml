@@ -1,5 +1,12 @@
 version: '3.8'
 
+networks:
+  ip6net:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 2001:db8::/64
+
 services:
   app:
     build:
@@ -12,7 +19,7 @@ services:
     working_dir: /app
     command: >
       sh -c "composer install --no-interaction --no-scripts &&
-            
+             
              php artisan serve --host=0.0.0.0 --port=8000"
     environment:
       - APP_ENV=local
@@ -23,11 +30,3 @@ services:
     networks:
       - ip6net   # serviço usa rede com IPv6
 
-networks:
-  ip6net:
-    driver: bridge
-    enable_ipv6: true
-    ipam:
-      driver: default
-      config:
-        - subnet: 2001:db8::/64
