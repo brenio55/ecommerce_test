@@ -147,6 +147,8 @@ No Linux:
 ```
 4. O endpoint estará ouvindo requisições corretamente em `http://localhost:8000`
 
+Obs: As migrações não necessárias com Docker por enquanto, porque o banco de dados já está criado e populado. Temporariamente tive que não implementar isso dentro do YML devido a limitações do Supabase. Caso queira, podes executar as migrações fora do Docker com os comandos do php artisan migrate && php artisan db:seed
+
 ## Comandos Úteis em outros casos
 
 ### Comandos Docker
